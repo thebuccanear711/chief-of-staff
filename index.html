@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Research Agent - AI Chief of Staff</title>
-    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🔍</text></svg>">
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         .hidden { display: none; }
@@ -418,9 +418,15 @@ Remember: NO citation tags, NO XML markup, NO thinking process, NO markdown aste
                     const match = section.match(/^(Role|Background|Recent|Notable):\s*(.+)/s);
                     if (match) {
                         const [, label, content] = match;
+                        const emojis = {
+                            'Role': '💼',
+                            'Background': '📚',
+                            'Recent': '📰',
+                            'Notable': '🏆'
+                        };
                         html += `
                             <div class="mb-4">
-                                <div class="font-bold text-gray-900 mb-1">${label}:</div>
+                                <div class="font-bold text-gray-900 mb-1">${emojis[label]} ${label}:</div>
                                 <div class="text-gray-700">${content.trim()}</div>
                             </div>
                         `;
