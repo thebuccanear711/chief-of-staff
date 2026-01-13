@@ -93,15 +93,31 @@ export default async function handler(req, res) {
         if (category === 'global') {
           searchPrompt = 'Find 5 top global news stories from TODAY. Return ONLY valid JSON with title, summary, url, source, imageUrl for each.';
         } else {
-          searchPrompt = `Find 5 recent news stories about legal technology, AI in legal practice, court reporting, or litigation technology from the past week.
+          searchPrompt = `Find 5 recent interesting news stories. Follow this priority order:
 
-Focus on:
-- Legal tech companies and startups
-- AI tools for lawyers and law firms  
-- Court reporting and deposition technology
+PRIORITY 1 (Preferred): Legal Technology & AI in Legal
+- Legal tech companies and startups (Clio, LexisNexis, Westlaw, etc.)
+- AI tools specifically for lawyers and law firms
+- Court reporting and deposition technology (like Steno, Veritext)
 - E-discovery and document review AI
-- Practice management software
+- Practice management and case management software
 - Legal research AI tools
+- Contract analysis and review technology
+
+PRIORITY 2 (If not enough Priority 1): Broader Legal Industry
+- Law firm news and mergers
+- Major legal cases and verdicts
+- Changes in legal regulations
+- Legal industry trends
+- Attorney and law firm technology adoption
+
+PRIORITY 3 (If still not enough): General AI & Technology
+- AI developments and breakthroughs
+- Enterprise AI adoption
+- Tech company news
+- Software and SaaS developments
+
+Search broadly and return the 5 most relevant and recent stories you can find from the past week. Prioritize Priority 1, but include Priority 2 and 3 if needed to get 5 good stories.
 
 Return ONLY valid JSON with title, summary, url, source, imageUrl for each story.`;
         }
@@ -128,15 +144,15 @@ CRITICAL: Return ONLY valid JSON, no preamble or explanation. Format:
     "summary": "1-2 sentence summary",
     "url": "https://source.com/article",
     "source": "Source Name",
-    "imageUrl": "https://image-url.com/image.jpg or https://via.placeholder.com/400x200?text=Legal+Tech"
+    "imageUrl": "https://image-url.com/image.jpg or null"
   }
 ]
 
 Requirements:
-- Use only FREE news sources (TechCrunch, The Verge, Reuters, Legal Dive, etc.)
+- Use only FREE news sources (TechCrunch, The Verge, Reuters, Legal Dive, ABA Journal, etc.)
 - Each story must have a working URL
 - Summaries should be 1-2 sentences max
-- Use placeholder image if real image unavailable
+- Use null for imageUrl if no real image available
 - Return exactly 5 stories
 
 Return ONLY the JSON array, nothing else.`
@@ -165,13 +181,13 @@ Return ONLY the JSON array, nothing else.`
         // Extract JSON from response
         const jsonMatch = newsText.match(/\[[\s\S]*\]/);
         if (!jsonMatch) {
-          // Return placeholder data if search fails
+          // Return placeholder data if search fails completely
           const placeholderStories = Array(5).fill(null).map((_, i) => ({
-            title: "Legal Tech News Story",
-            summary: "Unable to fetch recent legal tech news at this time. Please try refreshing.",
+            title: "News Unavailable",
+            summary: "Unable to fetch news at this time. Please try refreshing in a few moments.",
             url: "#",
-            source: "Placeholder",
-            imageUrl: "https://via.placeholder.com/400x200?text=Legal+Tech+News"
+            source: "System",
+            imageUrl: null
           }));
           
           return res.status(200).json({
