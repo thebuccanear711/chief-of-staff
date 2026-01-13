@@ -233,13 +233,20 @@
             const card = document.createElement('div');
             card.className = 'bg-white rounded-lg shadow-sm overflow-hidden hover:shadow-md transition-shadow';
 
-            // Use a data URI placeholder if no image
-            const defaultImage = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 200"%3E%3Crect width="400" height="200" fill="%23e5e7eb"/%3E%3Ctext x="50%25" y="50%25" dominant-baseline="middle" text-anchor="middle" fill="%236b7280" font-family="system-ui" font-size="18" font-weight="600"%3ENews Image%3C/text%3E%3C/svg%3E';
-            const imageUrl = (story.imageUrl && !story.imageUrl.includes('placeholder')) ? story.imageUrl : defaultImage;
+            // Simple gray placeholder - no external URLs
+            const hasValidImage = story.imageUrl && story.imageUrl !== 'null' && story.imageUrl.startsWith('http');
+            
+            let imageHtml = '';
+            if (hasValidImage) {
+                imageHtml = `<img src="${story.imageUrl}" alt="${story.title}" class="w-full h-48 object-cover" onerror="this.style.display='none';">`;
+            } else {
+                imageHtml = `<div class="w-full h-48 bg-gray-200 flex items-center justify-center">
+                    <span class="text-gray-400 text-sm">📰 News</span>
+                </div>`;
+            }
 
             card.innerHTML = `
-                <img src="${imageUrl}" alt="${story.title}" class="w-full h-48 object-cover" 
-                     onerror="this.src='${defaultImage}'">
+                ${imageHtml}
                 <div class="p-4">
                     <a href="${story.url}" target="_blank" class="block group">
                         <h3 class="text-lg font-bold text-gray-900 mb-2 group-hover:text-blue-600 transition-colors">
@@ -280,7 +287,7 @@
             }
         }
 
-        // Load all briefing data
+        // Load all briefing data with delays to avoid rate limits
         async function loadBriefing() {
             if (!apiKey) {
                 showError('Please set your API key in the Research Agent first, then come back here.');
@@ -293,18 +300,32 @@
             document.getElementById('globalNews').innerHTML = '';
             document.getElementById('legalNews').innerHTML = '';
 
-            // Load weather and stocks in parallel
-            await Promise.all([
-                loadWeather(),
-                loadStocks()
-            ]);
+            try {
+                // Load weather and stocks in parallel (different APIs)
+                await Promise.all([
+                    loadWeather(),
+                    loadStocks()
+                ]);
 
-            // Load news sequentially (to avoid rate limits)
-            await loadNews('global', 'globalNews');
-            await loadNews('legal', 'legalNews');
+                // Wait 2 seconds before loading news
+                await new Promise(resolve => setTimeout(resolve, 2000));
 
-            document.getElementById('newsContainer').classList.remove('hidden');
-            showLoading(false);
+                // Load global news first
+                await loadNews('global', 'globalNews');
+
+                // Wait 3 seconds before legal news to avoid Anthropic rate limits
+                await new Promise(resolve => setTimeout(resolve, 3000));
+
+                // Load legal news
+                await loadNews('legal', 'legalNews');
+
+                document.getElementById('newsContainer').classList.remove('hidden');
+            } catch (err) {
+                showError('Some data failed to load. This may be due to API rate limits. Please wait a minute and try refreshing.');
+                console.error('Briefing error:', err);
+            } finally {
+                showLoading(false);
+            }
         }
 
         // Refresh button
