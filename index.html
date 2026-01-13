@@ -119,29 +119,48 @@
         let imageFile = null;
         let apiKey = '';
 
-        // Load API key from storage
-        async function loadApiKey() {
-            try {
-                const result = await window.storage.get('anthropic_api_key');
-                if (result && result.value) {
-                    apiKey = result.value;
-                    document.getElementById('apiKey').value = apiKey;
-                }
-            } catch (err) {
-                // Key doesn't exist yet
+        // API endpoint - will be /api/research when deployed
+        const API_ENDPOINT = '/api/research';
+
+        // Load API key from localStorage
+        function loadApiKey() {
+            const saved = localStorage.getItem('anthropic_api_key');
+            if (saved) {
+                apiKey = saved;
+                document.getElementById('apiKey').value = apiKey;
             }
         }
 
         // Save API key
-        async function saveApiKey(key) {
+        function saveApiKey(key) {
             apiKey = key;
             if (key.trim()) {
-                try {
-                    await window.storage.set('anthropic_api_key', key);
-                } catch (err) {
-                    console.error('Failed to save API key:', err);
-                }
+                localStorage.setItem('anthropic_api_key', key);
             }
+        }
+
+        // Call backend API
+        async function callAPI(messages, tools = null, maxTokens = 3000) {
+            const response = await fetch(API_ENDPOINT, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    apiKey,
+                    messages,
+                    tools,
+                    max_tokens: maxTokens,
+                    model: 'claude-sonnet-4-20250514'
+                })
+            });
+
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.error || 'API request failed');
+            }
+
+            return response.json();
         }
 
         // Toggle input method
@@ -217,37 +236,24 @@
 
         // Extract names from image
         async function extractNamesFromImage(base64Image) {
-            const response = await fetch("https://api.anthropic.com/v1/messages", {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    "x-api-key": apiKey,
-                    "anthropic-version": "2023-06-01"
-                },
-                body: JSON.stringify({
-                    model: "claude-sonnet-4-20250514",
-                    max_tokens: 1024,
-                    messages: [{
-                        role: "user",
-                        content: [
-                            {
-                                type: "image",
-                                source: {
-                                    type: "base64",
-                                    media_type: "image/jpeg",
-                                    data: base64Image
-                                }
-                            },
-                            {
-                                type: "text",
-                                text: "Extract all person names from this image. Return ONLY a simple list of names, one per line, with no additional formatting, bullets, or explanations."
-                            }
-                        ]
-                    }]
-                })
-            });
+            const data = await callAPI([{
+                role: "user",
+                content: [
+                    {
+                        type: "image",
+                        source: {
+                            type: "base64",
+                            media_type: "image/jpeg",
+                            data: base64Image
+                        }
+                    },
+                    {
+                        type: "text",
+                        text: "Extract all person names from this image. Return ONLY a simple list of names, one per line, with no additional formatting, bullets, or explanations."
+                    }
+                ]
+            }], null, 1024);
 
-            const data = await response.json();
             if (data.content && data.content[0]) {
                 return data.content[0].text.trim();
             }
@@ -257,38 +263,23 @@
         // Find profile image
         async function findProfileImage(name, context) {
             try {
-                const response = await fetch("https://api.anthropic.com/v1/messages", {
-                    method: "POST",
-                    headers: {
-                        "Content-Type": "application/json",
-                        "x-api-key": apiKey,
-                        "anthropic-version": "2023-06-01"
-                    },
-                    body: JSON.stringify({
-                        model: "claude-sonnet-4-20250514",
-                        max_tokens: 2048,
-                        messages: [{
-                            role: "user",
-                            content: `Find the LinkedIn profile for ${name}${context ? ` who works at ${context}` : ''}. 
+                const data = await callAPI([{
+                    role: "user",
+                    content: `Find the LinkedIn profile for ${name}${context ? ` who works at ${context}` : ''}. 
 
 Steps:
 1. Search for their LinkedIn profile URL
-2. Visit the LinkedIn page using web_fetch
-3. Look for their profile photo image URL in the page content
-4. Return ONLY the image URL in this format: IMAGE_URL: [url]
+2. Look for their profile photo image URL
+3. Return ONLY the image URL in this format: IMAGE_URL: [url]
 
 If you cannot find an image, return: IMAGE_URL: NONE
 
-Important: LinkedIn profile photos are usually at URLs containing "profile-displayphoto" or "media.licdn.com". Extract the actual image URL, not the LinkedIn page URL.`
-                        }],
-                        tools: [{
-                            type: "web_search_20250305",
-                            name: "web_search"
-                        }]
-                    })
-                });
+Important: LinkedIn profile photos are usually at URLs containing "profile-displayphoto" or "media.licdn.com".`
+                }], [{
+                    type: "web_search_20250305",
+                    name: "web_search"
+                }], 2048);
 
-                const data = await response.json();
                 if (data.content) {
                     const text = data.content
                         .filter(block => block.type === 'text')
@@ -304,11 +295,6 @@ Important: LinkedIn profile photos are usually at URLs containing "profile-displ
                     if (urlMatch && !text.includes('NONE')) {
                         return urlMatch[1].replace(/[,\)]$/, '').trim();
                     }
-                    
-                    const anyImageMatch = text.match(/https?:\/\/[^\s]*\.(jpg|jpeg|png|webp)[^\s]*/i);
-                    if (anyImageMatch) {
-                        return anyImageMatch[0].replace(/[,\)]$/, '');
-                    }
                 }
                 return null;
             } catch (err) {
@@ -320,19 +306,9 @@ Important: LinkedIn profile photos are usually at URLs containing "profile-displ
         // Research person
         async function researchPerson(name) {
             try {
-                const response = await fetch("https://api.anthropic.com/v1/messages", {
-                    method: "POST",
-                    headers: {
-                        "Content-Type": "application/json",
-                        "x-api-key": apiKey,
-                        "anthropic-version": "2023-06-01"
-                    },
-                    body: JSON.stringify({
-                        model: "claude-sonnet-4-20250514",
-                        max_tokens: 3000,
-                        messages: [{
-                            role: "user",
-                            content: `Research ${name} and provide a professional background summary.
+                const data = await callAPI([{
+                    role: "user",
+                    content: `Research ${name} and provide a professional background summary.
 
 CRITICAL PRIORITIZATION RULE - READ THIS FIRST:
 If there are multiple people with the name "${name}", you MUST prioritize in this exact order:
@@ -360,19 +336,10 @@ Recent: [2-3 sentences about recent activities, news, or projects from the last 
 Notable: [1-2 sentences about key achievements]
 
 Remember: NO citation tags, NO XML markup, NO thinking process, NO markdown asterisks. Just clean text.`
-                        }],
-                        tools: [{
-                            type: "web_search_20250305",
-                            name: "web_search"
-                        }]
-                    })
-                });
-
-                const data = await response.json();
-                
-                if (data.error) {
-                    throw new Error(data.error.message);
-                }
+                }], [{
+                    type: "web_search_20250305",
+                    name: "web_search"
+                }]);
 
                 let researchText = '';
                 if (data.content) {
