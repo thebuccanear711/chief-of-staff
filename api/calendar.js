@@ -39,8 +39,11 @@ export default async function handler(req, res) {
       case 'listEvents': {
         const { timeMin, timeMax, maxResults = 50 } = params || {};
         
+        // Use work calendar email instead of 'primary'
+        const calendarId = 'sean.twersky@steno.com';
+        
         const response = await calendar.events.list({
-          calendarId: 'primary',
+          calendarId: calendarId,
           timeMin: timeMin || new Date().toISOString(),
           timeMax: timeMax,
           maxResults,
@@ -61,8 +64,10 @@ export default async function handler(req, res) {
           return res.status(400).json({ error: 'eventId required' });
         }
 
+        const calendarId = 'sean.twersky@steno.com';
+
         const response = await calendar.events.get({
-          calendarId: 'primary',
+          calendarId: calendarId,
           eventId: eventId,
         });
 
@@ -75,17 +80,19 @@ export default async function handler(req, res) {
       case 'findFreeTime': {
         const { timeMin, timeMax } = params || {};
         
+        const calendarId = 'sean.twersky@steno.com';
+        
         const response = await calendar.freebusy.query({
           requestBody: {
             timeMin: timeMin || new Date().toISOString(),
             timeMax: timeMax || new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
-            items: [{ id: 'primary' }],
+            items: [{ id: calendarId }],
           },
         });
 
         return res.status(200).json({
           success: true,
-          freebusy: response.data.calendars.primary
+          freebusy: response.data.calendars[calendarId]
         });
       }
 
