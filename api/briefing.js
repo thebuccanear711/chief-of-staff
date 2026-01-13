@@ -22,131 +22,64 @@ export default async function handler(req, res) {
 
     switch (action) {
       case 'getWeather': {
-        try {
-          const weatherKey = process.env.WEATHER_API_KEY;
-          const weatherUrl = `https://api.openweathermap.org/data/2.5/weather?q=Los Angeles,US&appid=${weatherKey}&units=imperial`;
-          
-          const weatherResponse = await fetch(weatherUrl);
-          const weatherData = await weatherResponse.json();
+        const weatherKey = process.env.WEATHER_API_KEY;
+        const weatherUrl = `https://api.openweathermap.org/data/2.5/weather?q=Los Angeles,US&appid=${weatherKey}&units=imperial`;
+        
+        const weatherResponse = await fetch(weatherUrl);
+        const weatherData = await weatherResponse.json();
 
-          if (!weatherResponse.ok || weatherData.cod !== 200) {
-            // Return mock data if API fails
-            return res.status(200).json({
-              success: true,
-              weather: {
-                temp: 68,
-                feels_like: 65,
-                description: "partly cloudy",
-                icon: "02d",
-                humidity: 55,
-                wind_speed: 8
-              },
-              note: "Using cached data"
-            });
-          }
-
-          return res.status(200).json({
-            success: true,
-            weather: {
-              temp: Math.round(weatherData.main.temp),
-              feels_like: Math.round(weatherData.main.feels_like),
-              description: weatherData.weather[0].description,
-              icon: weatherData.weather[0].icon,
-              humidity: weatherData.main.humidity,
-              wind_speed: Math.round(weatherData.wind.speed)
-            }
-          });
-        } catch (error) {
-          // Return mock data on error
-          return res.status(200).json({
-            success: true,
-            weather: {
-              temp: 68,
-              feels_like: 65,
-              description: "partly cloudy",
-              icon: "02d",
-              humidity: 55,
-              wind_speed: 8
-            },
-            note: "Using cached data"
-          });
+        if (!weatherResponse.ok) {
+          throw new Error('Weather API failed');
         }
+
+        return res.status(200).json({
+          success: true,
+          weather: {
+            temp: Math.round(weatherData.main.temp),
+            feels_like: Math.round(weatherData.main.feels_like),
+            description: weatherData.weather[0].description,
+            icon: weatherData.weather[0].icon,
+            humidity: weatherData.main.humidity,
+            wind_speed: Math.round(weatherData.wind.speed)
+          }
+        });
       }
 
       case 'getStocks': {
         const stockKey = process.env.STOCK_API_KEY;
         
-        try {
-          // Get S&P 500 (using SPY ETF as proxy)
-          const spUrl = `https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=SPY&apikey=${stockKey}`;
-          const spResponse = await fetch(spUrl);
-          const spData = await spResponse.json();
+        // Get S&P 500 (using SPY ETF as proxy)
+        const spUrl = `https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=SPY&apikey=${stockKey}`;
+        const spResponse = await fetch(spUrl);
+        const spData = await spResponse.json();
 
-          // Wait 15 seconds to avoid rate limit (Alpha Vantage allows 5 calls per minute)
-          await new Promise(resolve => setTimeout(resolve, 15000));
+        // Get NASDAQ (using QQQ ETF as proxy)
+        const nasdaqUrl = `https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=QQQ&apikey=${stockKey}`;
+        const nasdaqResponse = await fetch(nasdaqUrl);
+        const nasdaqData = await nasdaqResponse.json();
 
-          // Get NASDAQ (using QQQ ETF as proxy)
-          const nasdaqUrl = `https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=QQQ&apikey=${stockKey}`;
-          const nasdaqResponse = await fetch(nasdaqUrl);
-          const nasdaqData = await nasdaqResponse.json();
-
-          if (!spData['Global Quote'] || !nasdaqData['Global Quote']) {
-            // Return mock data if API fails
-            return res.status(200).json({
-              success: true,
-              stocks: {
-                sp500: {
-                  price: "580.50",
-                  change: "2.45",
-                  changePercent: "0.42"
-                },
-                nasdaq: {
-                  price: "505.20",
-                  change: "3.15",
-                  changePercent: "0.63"
-                }
-              },
-              note: "Using cached data due to API rate limit"
-            });
-          }
-
-          const spQuote = spData['Global Quote'];
-          const nasdaqQuote = nasdaqData['Global Quote'];
-
-          return res.status(200).json({
-            success: true,
-            stocks: {
-              sp500: {
-                price: parseFloat(spQuote['05. price']).toFixed(2),
-                change: parseFloat(spQuote['09. change']).toFixed(2),
-                changePercent: spQuote['10. change percent'].replace('%', '')
-              },
-              nasdaq: {
-                price: parseFloat(nasdaqQuote['05. price']).toFixed(2),
-                change: parseFloat(nasdaqQuote['09. change']).toFixed(2),
-                changePercent: nasdaqQuote['10. change percent'].replace('%', '')
-              }
-            }
-          });
-        } catch (error) {
-          // Return mock data on error
-          return res.status(200).json({
-            success: true,
-            stocks: {
-              sp500: {
-                price: "580.50",
-                change: "2.45",
-                changePercent: "0.42"
-              },
-              nasdaq: {
-                price: "505.20",
-                change: "3.15",
-                changePercent: "0.63"
-              }
-            },
-            note: "Using cached data"
-          });
+        if (!spData['Global Quote'] || !nasdaqData['Global Quote']) {
+          throw new Error('Stock API failed or rate limit reached');
         }
+
+        const spQuote = spData['Global Quote'];
+        const nasdaqQuote = nasdaqData['Global Quote'];
+
+        return res.status(200).json({
+          success: true,
+          stocks: {
+            sp500: {
+              price: parseFloat(spQuote['05. price']).toFixed(2),
+              change: parseFloat(spQuote['09. change']).toFixed(2),
+              changePercent: spQuote['10. change percent'].replace('%', '')
+            },
+            nasdaq: {
+              price: parseFloat(nasdaqQuote['05. price']).toFixed(2),
+              change: parseFloat(nasdaqQuote['09. change']).toFixed(2),
+              changePercent: nasdaqQuote['10. change percent'].replace('%', '')
+            }
+          }
+        });
       }
 
       case 'getNews': {
@@ -156,11 +89,21 @@ export default async function handler(req, res) {
 
         const { category } = req.body;
         
-        let searchQuery;
+        let searchPrompt;
         if (category === 'global') {
-          searchQuery = 'top global news stories today';
+          searchPrompt = 'Find 5 top global news stories from TODAY. Return ONLY valid JSON with title, summary, url, source, imageUrl for each.';
         } else {
-          searchQuery = 'latest news legal tech AI stenography court reporting';
+          searchPrompt = `Find 5 recent news stories about legal technology, AI in legal practice, court reporting, or litigation technology from the past week.
+
+Focus on:
+- Legal tech companies and startups
+- AI tools for lawyers and law firms  
+- Court reporting and deposition technology
+- E-discovery and document review AI
+- Practice management software
+- Legal research AI tools
+
+Return ONLY valid JSON with title, summary, url, source, imageUrl for each story.`;
         }
 
         // Use Claude with web search to find news
@@ -176,7 +119,7 @@ export default async function handler(req, res) {
             max_tokens: 4000,
             messages: [{
               role: 'user',
-              content: `Find 5 ${category === 'global' ? 'top global news' : 'legal tech, AI in legal, or stenography'} stories from the last 24 hours.
+              content: `${searchPrompt}
 
 CRITICAL: Return ONLY valid JSON, no preamble or explanation. Format:
 [
@@ -185,16 +128,16 @@ CRITICAL: Return ONLY valid JSON, no preamble or explanation. Format:
     "summary": "1-2 sentence summary",
     "url": "https://source.com/article",
     "source": "Source Name",
-    "imageUrl": "https://image-url.com/image.jpg"
+    "imageUrl": "https://image-url.com/image.jpg or https://via.placeholder.com/400x200?text=Legal+Tech"
   }
 ]
 
 Requirements:
-- Use only FREE news sources (Reuters, AP, BBC, TechCrunch, etc.)
+- Use only FREE news sources (TechCrunch, The Verge, Reuters, Legal Dive, etc.)
 - Each story must have a working URL
 - Summaries should be 1-2 sentences max
-- Include a relevant image URL if available (or use a placeholder)
-- Focus on ${category === 'global' ? 'major global events' : 'legal technology, AI in legal practice, court reporting, and stenography'}
+- Use placeholder image if real image unavailable
+- Return exactly 5 stories
 
 Return ONLY the JSON array, nothing else.`
             }],
@@ -222,7 +165,19 @@ Return ONLY the JSON array, nothing else.`
         // Extract JSON from response
         const jsonMatch = newsText.match(/\[[\s\S]*\]/);
         if (!jsonMatch) {
-          throw new Error('Failed to parse news data');
+          // Return placeholder data if search fails
+          const placeholderStories = Array(5).fill(null).map((_, i) => ({
+            title: "Legal Tech News Story",
+            summary: "Unable to fetch recent legal tech news at this time. Please try refreshing.",
+            url: "#",
+            source: "Placeholder",
+            imageUrl: "https://via.placeholder.com/400x200?text=Legal+Tech+News"
+          }));
+          
+          return res.status(200).json({
+            success: true,
+            stories: placeholderStories
+          });
         }
 
         const stories = JSON.parse(jsonMatch[0]);
