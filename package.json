@@ -1,0 +1,8 @@
+{
+  "name": "ai-chief-of-staff",
+  "version": "1.0.0",
+  "description": "AI Chief of Staff - Research and Calendar Agents",
+  "dependencies": {
+    "googleapis": "^128.0.0"
+  }
+}

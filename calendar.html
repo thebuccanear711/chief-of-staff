@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Calendar Agent - AI Chief of Staff</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📅</text></svg>">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .hidden { display: none; }
+    </style>
+</head>
+<body class="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
+    <div class="p-6 max-w-6xl mx-auto">
+        <!-- Header with Navigation -->
+        <div class="bg-white rounded-lg shadow-sm p-6 mb-6">
+            <div class="flex items-center justify-between mb-2">
+                <div class="flex items-center gap-3">
+                    <svg class="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                        <line x1="16" y1="2" x2="16" y2="6"></line>
+                        <line x1="8" y1="2" x2="8" y2="6"></line>
+                        <line x1="3" y1="10" x2="21" y2="10"></line>
+                    </svg>
+                    <h1 class="text-3xl font-bold text-gray-900">Calendar Agent</h1>
+                </div>
+                <a href="/index.html" class="px-4 py-2 text-sm font-medium text-blue-600 hover:text-blue-700 border border-blue-600 rounded-lg hover:bg-blue-50 transition-colors">
+                    🔍 Research Agent
+                </a>
+            </div>
+            <p class="text-gray-600">Part of your AI Chief of Staff</p>
+        </div>
+
+        <!-- Time Range Selector -->
+        <div class="bg-white rounded-lg shadow-sm p-6 mb-6">
+            <div class="flex gap-4 items-end">
+                <div class="flex-1">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">View Period</label>
+                    <select id="timeRange" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                        <option value="today">Today</option>
+                        <option value="tomorrow">Tomorrow</option>
+                        <option value="week" selected>This Week</option>
+                        <option value="month">This Month</option>
+                        <option value="custom">Custom Range</option>
+                    </select>
+                </div>
+                <button id="loadBtn" class="px-6 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors flex items-center gap-2">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                        <line x1="16" y1="2" x2="16" y2="6"></line>
+                        <line x1="8" y1="2" x2="8" y2="6"></line>
+                        <line x1="3" y1="10" x2="21" y2="10"></line>
+                    </svg>
+                    Load Events
+                </button>
+            </div>
+
+            <!-- Custom date range -->
+            <div id="customRange" class="hidden mt-4 flex gap-4">
+                <div class="flex-1">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Start Date</label>
+                    <input type="datetime-local" id="startDate" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                </div>
+                <div class="flex-1">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">End Date</label>
+                    <input type="datetime-local" id="endDate" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                </div>
+            </div>
+        </div>
+
+        <!-- Error Display -->
+        <div id="errorBox" class="hidden bg-red-50 border border-red-200 rounded-lg p-4 mb-6 flex items-start gap-3">
+            <svg class="w-5 h-5 text-red-600 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <circle cx="12" cy="12" r="10"></circle>
+                <line x1="12" y1="8" x2="12" y2="12"></line>
+                <line x1="12" y1="16" x2="12.01" y2="16"></line>
+            </svg>
+            <p class="text-red-800" id="errorText"></p>
+        </div>
+
+        <!-- Loading State -->
+        <div id="loadingBox" class="hidden bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6 flex items-center gap-3">
+            <svg class="w-5 h-5 text-blue-600 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <circle cx="12" cy="12" r="10" stroke-width="4" class="opacity-25"></circle>
+                <path d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" class="opacity-75"></path>
+            </svg>
+            <p class="text-blue-800">Loading your calendar...</p>
+        </div>
+
+        <!-- Events List -->
+        <div id="eventsContainer" class="hidden">
+            <div class="flex items-center justify-between mb-4">
+                <h2 class="text-2xl font-bold text-gray-900">Your Schedule</h2>
+                <p class="text-sm text-gray-600" id="eventCount"></p>
+            </div>
+            <div id="events" class="space-y-4"></div>
+        </div>
+
+        <!-- Empty State -->
+        <div id="emptyState" class="hidden bg-white rounded-lg shadow-sm p-12 text-center">
+            <svg class="w-16 h-16 text-gray-300 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                <line x1="16" y1="2" x2="16" y2="6"></line>
+                <line x1="8" y1="2" x2="8" y2="6"></line>
+                <line x1="3" y1="10" x2="21" y2="10"></line>
+            </svg>
+            <h3 class="text-xl font-semibold text-gray-700 mb-2">No events found</h3>
+            <p class="text-gray-500">You don't have any events scheduled for this period.</p>
+        </div>
+    </div>
+
+    <script>
+        const API_ENDPOINT = '/api/calendar';
+
+        // Show/hide custom date range
+        document.getElementById('timeRange').addEventListener('change', (e) => {
+            const customRange = document.getElementById('customRange');
+            if (e.target.value === 'custom') {
+                customRange.classList.remove('hidden');
+            } else {
+                customRange.classList.add('hidden');
+            }
+        });
+
+        // Show error
+        function showError(message) {
+            const errorBox = document.getElementById('errorBox');
+            const errorText = document.getElementById('errorText');
+            if (message) {
+                errorText.textContent = message;
+                errorBox.classList.remove('hidden');
+            } else {
+                errorBox.classList.add('hidden');
+            }
+        }
+
+        // Show loading
+        function showLoading(show) {
+            const loadingBox = document.getElementById('loadingBox');
+            if (show) {
+                loadingBox.classList.remove('hidden');
+            } else {
+                loadingBox.classList.add('hidden');
+            }
+        }
+
+        // Get time range
+        function getTimeRange() {
+            const range = document.getElementById('timeRange').value;
+            const now = new Date();
+            let timeMin, timeMax;
+
+            switch (range) {
+                case 'today':
+                    timeMin = new Date(now.setHours(0, 0, 0, 0)).toISOString();
+                    timeMax = new Date(now.setHours(23, 59, 59, 999)).toISOString();
+                    break;
+                case 'tomorrow':
+                    const tomorrow = new Date(now);
+                    tomorrow.setDate(tomorrow.getDate() + 1);
+                    timeMin = new Date(tomorrow.setHours(0, 0, 0, 0)).toISOString();
+                    timeMax = new Date(tomorrow.setHours(23, 59, 59, 999)).toISOString();
+                    break;
+                case 'week':
+                    timeMin = now.toISOString();
+                    const weekEnd = new Date(now);
+                    weekEnd.setDate(weekEnd.getDate() + 7);
+                    timeMax = weekEnd.toISOString();
+                    break;
+                case 'month':
+                    timeMin = now.toISOString();
+                    const monthEnd = new Date(now);
+                    monthEnd.setMonth(monthEnd.getMonth() + 1);
+                    timeMax = monthEnd.toISOString();
+                    break;
+                case 'custom':
+                    const startInput = document.getElementById('startDate').value;
+                    const endInput = document.getElementById('endDate').value;
+                    if (!startInput || !endInput) {
+                        throw new Error('Please select both start and end dates');
+                    }
+                    timeMin = new Date(startInput).toISOString();
+                    timeMax = new Date(endInput).toISOString();
+                    break;
+                default:
+                    timeMin = now.toISOString();
+                    timeMax = new Date(now.setDate(now.getDate() + 7)).toISOString();
+            }
+
+            return { timeMin, timeMax };
+        }
+
+        // Format date/time
+        function formatDateTime(dateString) {
+            const date = new Date(dateString);
+            const today = new Date();
+            const tomorrow = new Date(today);
+            tomorrow.setDate(tomorrow.getDate() + 1);
+
+            const dateStr = date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+            const timeStr = date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+
+            // Check if today or tomorrow
+            if (date.toDateString() === today.toDateString()) {
+                return `Today at ${timeStr}`;
+            } else if (date.toDateString() === tomorrow.toDateString()) {
+                return `Tomorrow at ${timeStr}`;
+            } else {
+                return `${dateStr} at ${timeStr}`;
+            }
+        }
+
+        // Display event
+        function displayEvent(event) {
+            const eventsDiv = document.getElementById('events');
+            const eventCard = document.createElement('div');
+            eventCard.className = 'bg-white rounded-lg shadow-sm p-6 hover:shadow-md transition-shadow';
+
+            const startTime = event.start.dateTime || event.start.date;
+            const endTime = event.end.dateTime || event.end.date;
+            const isAllDay = !event.start.dateTime;
+
+            let html = `
+                <div class="flex items-start gap-4">
+                    <div class="flex-shrink-0 w-2 h-2 mt-2 rounded-full bg-blue-600"></div>
+                    <div class="flex-1">
+                        <h3 class="text-lg font-bold text-gray-900 mb-2">${event.summary || 'Untitled Event'}</h3>
+            `;
+
+            // Time
+            if (isAllDay) {
+                html += `
+                    <p class="text-sm text-gray-600 mb-2">
+                        <span class="font-medium">🕐 All Day</span>
+                    </p>
+                `;
+            } else {
+                const start = new Date(startTime);
+                const end = new Date(endTime);
+                const duration = Math.round((end - start) / (1000 * 60));
+                html += `
+                    <p class="text-sm text-gray-600 mb-2">
+                        <span class="font-medium">🕐 ${formatDateTime(startTime)}</span>
+                        <span class="text-gray-400">• ${duration} min</span>
+                    </p>
+                `;
+            }
+
+            // Location
+            if (event.location) {
+                html += `<p class="text-sm text-gray-600 mb-2">📍 ${event.location}</p>`;
+            }
+
+            // Attendees
+            if (event.attendees && event.attendees.length > 0) {
+                const attendeeNames = event.attendees
+                    .filter(a => a.email !== event.organizer?.email)
+                    .map(a => a.displayName || a.email.split('@')[0])
+                    .slice(0, 3);
+                
+                if (attendeeNames.length > 0) {
+                    html += `<p class="text-sm text-gray-600 mb-2">👥 ${attendeeNames.join(', ')}`;
+                    if (event.attendees.length > 3) {
+                        html += ` +${event.attendees.length - 3} more`;
+                    }
+                    html += `</p>`;
+                }
+            }
+
+            // Description
+            if (event.description) {
+                const shortDesc = event.description.length > 150 
+                    ? event.description.substring(0, 150) + '...' 
+                    : event.description;
+                html += `<p class="text-sm text-gray-700 mt-3 bg-gray-50 p-3 rounded">${shortDesc}</p>`;
+            }
+
+            // Meeting link
+            if (event.hangoutLink) {
+                html += `
+                    <a href="${event.hangoutLink}" target="_blank" 
+                       class="inline-flex items-center gap-2 mt-3 text-sm text-blue-600 hover:text-blue-700">
+                        🎥 Join Meeting
+                    </a>
+                `;
+            }
+
+            html += `
+                    </div>
+                </div>
+            `;
+
+            eventCard.innerHTML = html;
+            eventsDiv.appendChild(eventCard);
+        }
+
+        // Load events
+        async function loadEvents() {
+            showError('');
+            showLoading(true);
+            document.getElementById('eventsContainer').classList.add('hidden');
+            document.getElementById('emptyState').classList.add('hidden');
+            document.getElementById('events').innerHTML = '';
+
+            try {
+                const { timeMin, timeMax } = getTimeRange();
+
+                const response = await fetch(API_ENDPOINT, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        action: 'listEvents',
+                        params: { timeMin, timeMax, maxResults: 50 }
+                    })
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.error || 'Failed to load events');
+                }
+
+                const events = data.events || [];
+
+                if (events.length === 0) {
+                    document.getElementById('emptyState').classList.remove('hidden');
+                } else {
+                    document.getElementById('eventsContainer').classList.remove('hidden');
+                    document.getElementById('eventCount').textContent = `${events.length} event${events.length !== 1 ? 's' : ''}`;
+                    
+                    events.forEach(event => displayEvent(event));
+                }
+
+            } catch (err) {
+                showError(err.message);
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        // Event listeners
+        document.getElementById('loadBtn').addEventListener('click', loadEvents);
+
+        // Auto-load on page load
+        window.addEventListener('load', () => {
+            loadEvents();
+        });
+    </script>
+</body>
+</html>
