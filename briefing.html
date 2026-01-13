@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Daily Briefing - AI Chief of Staff</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📰</text></svg>">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .hidden { display: none; }
+    </style>
+</head>
+<body class="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
+    <div class="p-6 max-w-7xl mx-auto">
+        <!-- Header with Navigation -->
+        <div class="bg-white rounded-lg shadow-sm p-6 mb-6">
+            <div class="flex items-center justify-between mb-2">
+                <div class="flex items-center gap-3">
+                    <svg class="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z"></path>
+                    </svg>
+                    <h1 class="text-3xl font-bold text-gray-900">Daily Briefing</h1>
+                </div>
+                <div class="flex gap-2">
+                    <a href="/index.html" class="px-4 py-2 text-sm font-medium text-blue-600 hover:text-blue-700 border border-blue-600 rounded-lg hover:bg-blue-50 transition-colors">
+                        🔍 Research
+                    </a>
+                    <a href="/calendar.html" class="px-4 py-2 text-sm font-medium text-blue-600 hover:text-blue-700 border border-blue-600 rounded-lg hover:bg-blue-50 transition-colors">
+                        📅 Calendar
+                    </a>
+                </div>
+            </div>
+            <p class="text-gray-600">Part of your AI Chief of Staff</p>
+        </div>
+
+        <!-- Top Info Bar -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+            <!-- Weather -->
+            <div class="bg-white rounded-lg shadow-sm p-6">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-sm text-gray-500 mb-1">Los Angeles</p>
+                        <p class="text-3xl font-bold text-gray-900" id="temperature">--°F</p>
+                        <p class="text-sm text-gray-600 capitalize" id="weatherDesc">Loading...</p>
+                    </div>
+                    <div class="text-5xl" id="weatherIcon">🌤️</div>
+                </div>
+            </div>
+
+            <!-- S&P 500 -->
+            <div class="bg-white rounded-lg shadow-sm p-6">
+                <p class="text-sm text-gray-500 mb-2">S&P 500</p>
+                <p class="text-2xl font-bold text-gray-900" id="spPrice">--</p>
+                <p class="text-sm font-medium" id="spChange">
+                    <span class="text-gray-500">Loading...</span>
+                </p>
+            </div>
+
+            <!-- NASDAQ -->
+            <div class="bg-white rounded-lg shadow-sm p-6">
+                <p class="text-sm text-gray-500 mb-2">NASDAQ</p>
+                <p class="text-2xl font-bold text-gray-900" id="nasdaqPrice">--</p>
+                <p class="text-sm font-medium" id="nasdaqChange">
+                    <span class="text-gray-500">Loading...</span>
+                </p>
+            </div>
+        </div>
+
+        <!-- Refresh Button -->
+        <div class="mb-6 text-center">
+            <button id="refreshBtn" class="px-6 py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors inline-flex items-center gap-2">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                </svg>
+                Refresh Briefing
+            </button>
+        </div>
+
+        <!-- Loading State -->
+        <div id="loadingBox" class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6 flex items-center gap-3">
+            <svg class="w-5 h-5 text-blue-600 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <circle cx="12" cy="12" r="10" stroke-width="4" class="opacity-25"></circle>
+                <path d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" class="opacity-75"></path>
+            </svg>
+            <p class="text-blue-800">Loading your daily briefing...</p>
+        </div>
+
+        <!-- Error Display -->
+        <div id="errorBox" class="hidden bg-red-50 border border-red-200 rounded-lg p-4 mb-6 flex items-start gap-3">
+            <svg class="w-5 h-5 text-red-600 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <circle cx="12" cy="12" r="10"></circle>
+                <line x1="12" y1="8" x2="12" y2="12"></line>
+                <line x1="12" y1="16" x2="12.01" y2="16"></line>
+            </svg>
+            <p class="text-red-800" id="errorText"></p>
+        </div>
+
+        <!-- News Grid -->
+        <div id="newsContainer" class="hidden">
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <!-- Global News Column -->
+                <div>
+                    <h2 class="text-2xl font-bold text-gray-900 mb-4 flex items-center gap-2">
+                        🌍 Global News
+                    </h2>
+                    <div id="globalNews" class="space-y-4"></div>
+                </div>
+
+                <!-- Legal Tech News Column -->
+                <div>
+                    <h2 class="text-2xl font-bold text-gray-900 mb-4 flex items-center gap-2">
+                        ⚖️ Legal Tech & AI
+                    </h2>
+                    <div id="legalNews" class="space-y-4"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_ENDPOINT = '/api/briefing';
+        let apiKey = '';
+
+        // Load API key
+        function loadApiKey() {
+            const saved = localStorage.getItem('anthropic_api_key');
+            if (saved) {
+                apiKey = saved;
+            } else {
+                showError('Please set your API key in the Research Agent first');
+            }
+        }
+
+        // Show error
+        function showError(message) {
+            const errorBox = document.getElementById('errorBox');
+            const errorText = document.getElementById('errorText');
+            if (message) {
+                errorText.textContent = message;
+                errorBox.classList.remove('hidden');
+            } else {
+                errorBox.classList.add('hidden');
+            }
+        }
+
+        // Show loading
+        function showLoading(show) {
+            const loadingBox = document.getElementById('loadingBox');
+            if (show) {
+                loadingBox.classList.remove('hidden');
+            } else {
+                loadingBox.classList.add('hidden');
+            }
+        }
+
+        // Weather icons map
+        const weatherIcons = {
+            '01d': '☀️', '01n': '🌙',
+            '02d': '⛅', '02n': '☁️',
+            '03d': '☁️', '03n': '☁️',
+            '04d': '☁️', '04n': '☁️',
+            '09d': '🌧️', '09n': '🌧️',
+            '10d': '🌦️', '10n': '🌧️',
+            '11d': '⛈️', '11n': '⛈️',
+            '13d': '❄️', '13n': '❄️',
+            '50d': '🌫️', '50n': '🌫️'
+        };
+
+        // Load weather
+        async function loadWeather() {
+            try {
+                const response = await fetch(API_ENDPOINT, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ action: 'getWeather' })
+                });
+
+                const data = await response.json();
+                if (data.success) {
+                    document.getElementById('temperature').textContent = `${data.weather.temp}°F`;
+                    document.getElementById('weatherDesc').textContent = data.weather.description;
+                    document.getElementById('weatherIcon').textContent = weatherIcons[data.weather.icon] || '🌤️';
+                }
+            } catch (err) {
+                console.error('Weather error:', err);
+            }
+        }
+
+        // Load stocks
+        async function loadStocks() {
+            try {
+                const response = await fetch(API_ENDPOINT, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ action: 'getStocks' })
+                });
+
+                const data = await response.json();
+                if (data.success) {
+                    // S&P 500
+                    document.getElementById('spPrice').textContent = `$${data.stocks.sp500.price}`;
+                    const spChange = parseFloat(data.stocks.sp500.change);
+                    const spPercent = parseFloat(data.stocks.sp500.changePercent);
+                    const spColor = spChange >= 0 ? 'text-green-600' : 'text-red-600';
+                    const spArrow = spChange >= 0 ? '▲' : '▼';
+                    document.getElementById('spChange').innerHTML = `
+                        <span class="${spColor}">${spArrow} ${Math.abs(spChange).toFixed(2)} (${Math.abs(spPercent).toFixed(2)}%)</span>
+                    `;
+
+                    // NASDAQ
+                    document.getElementById('nasdaqPrice').textContent = `$${data.stocks.nasdaq.price}`;
+                    const nasdaqChange = parseFloat(data.stocks.nasdaq.change);
+                    const nasdaqPercent = parseFloat(data.stocks.nasdaq.changePercent);
+                    const nasdaqColor = nasdaqChange >= 0 ? 'text-green-600' : 'text-red-600';
+                    const nasdaqArrow = nasdaqChange >= 0 ? '▲' : '▼';
+                    document.getElementById('nasdaqChange').innerHTML = `
+                        <span class="${nasdaqColor}">${nasdaqArrow} ${Math.abs(nasdaqChange).toFixed(2)} (${Math.abs(nasdaqPercent).toFixed(2)}%)</span>
+                    `;
+                }
+            } catch (err) {
+                console.error('Stocks error:', err);
+            }
+        }
+
+        // Display story
+        function displayStory(story, containerId) {
+            const container = document.getElementById(containerId);
+            const card = document.createElement('div');
+            card.className = 'bg-white rounded-lg shadow-sm overflow-hidden hover:shadow-md transition-shadow';
+
+            const imageUrl = story.imageUrl || 'https://via.placeholder.com/400x200?text=News';
+
+            card.innerHTML = `
+                <img src="${imageUrl}" alt="${story.title}" class="w-full h-48 object-cover" 
+                     onerror="this.src='https://via.placeholder.com/400x200?text=News'">
+                <div class="p-4">
+                    <a href="${story.url}" target="_blank" class="block group">
+                        <h3 class="text-lg font-bold text-gray-900 mb-2 group-hover:text-blue-600 transition-colors">
+                            ${story.title}
+                        </h3>
+                    </a>
+                    <p class="text-sm text-gray-700 mb-3">${story.summary}</p>
+                    <div class="flex items-center justify-between text-xs text-gray-500">
+                        <span>${story.source}</span>
+                        <a href="${story.url}" target="_blank" class="text-blue-600 hover:text-blue-700 font-medium">
+                            Read more →
+                        </a>
+                    </div>
+                </div>
+            `;
+
+            container.appendChild(card);
+        }
+
+        // Load news
+        async function loadNews(category, containerId) {
+            try {
+                const response = await fetch(API_ENDPOINT, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        action: 'getNews',
+                        category: category,
+                        apiKey: apiKey
+                    })
+                });
+
+                const data = await response.json();
+                if (data.success && data.stories) {
+                    data.stories.forEach(story => displayStory(story, containerId));
+                }
+            } catch (err) {
+                console.error(`${category} news error:`, err);
+                showError(`Failed to load ${category} news. Please try refreshing.`);
+            }
+        }
+
+        // Load all briefing data
+        async function loadBriefing() {
+            if (!apiKey) {
+                showError('Please set your API key in the Research Agent first, then come back here.');
+                return;
+            }
+
+            showError('');
+            showLoading(true);
+            document.getElementById('newsContainer').classList.add('hidden');
+            document.getElementById('globalNews').innerHTML = '';
+            document.getElementById('legalNews').innerHTML = '';
+
+            // Load weather and stocks in parallel
+            await Promise.all([
+                loadWeather(),
+                loadStocks()
+            ]);
+
+            // Load news sequentially (to avoid rate limits)
+            await loadNews('global', 'globalNews');
+            await loadNews('legal', 'legalNews');
+
+            document.getElementById('newsContainer').classList.remove('hidden');
+            showLoading(false);
+        }
+
+        // Refresh button
+        document.getElementById('refreshBtn').addEventListener('click', () => {
+            loadBriefing();
+        });
+
+        // Auto-load on page load
+        window.addEventListener('load', () => {
+            loadApiKey();
+            loadBriefing();
+        });
+    </script>
+</body>
+</html>
