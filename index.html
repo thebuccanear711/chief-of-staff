@@ -1,0 +1,545 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Research Agent - AI Chief of Staff</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .hidden { display: none; }
+    </style>
+</head>
+<body class="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
+    <div class="p-6 max-w-5xl mx-auto">
+        <!-- Header -->
+        <div class="bg-white rounded-lg shadow-sm p-6 mb-6">
+            <div class="flex items-center gap-3 mb-2">
+                <svg class="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <circle cx="11" cy="11" r="8"></circle>
+                    <path d="m21 21-4.35-4.35"></path>
+                </svg>
+                <h1 class="text-3xl font-bold text-gray-900">Research Agent</h1>
+            </div>
+            <p class="text-gray-600">Part of your AI Chief of Staff</p>
+        </div>
+
+        <!-- Input Section -->
+        <div class="bg-white rounded-lg shadow-sm p-6 mb-6">
+            <div class="flex gap-4 mb-4">
+                <button id="textBtn" class="flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-colors bg-blue-600 text-white">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                        <polyline points="14 2 14 8 20 8"></polyline>
+                        <line x1="16" y1="13" x2="8" y2="13"></line>
+                        <line x1="16" y1="17" x2="8" y2="17"></line>
+                        <polyline points="10 9 9 9 8 9"></polyline>
+                    </svg>
+                    Text List
+                </button>
+                <button id="imageBtn" class="flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-colors bg-gray-100 text-gray-700 hover:bg-gray-200">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                        <polyline points="17 8 12 3 7 8"></polyline>
+                        <line x1="12" y1="3" x2="12" y2="15"></line>
+                    </svg>
+                    Upload Image
+                </button>
+            </div>
+
+            <div id="textInput">
+                <label class="block text-sm font-medium text-gray-700 mb-2">
+                    Attendee Names (one per line)
+                </label>
+                <textarea id="attendeeList" placeholder="John Smith&#10;Jane Doe&#10;Robert Johnson" 
+                    class="w-full h-40 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"></textarea>
+            </div>
+
+            <div id="imageInput" class="hidden">
+                <label class="block text-sm font-medium text-gray-700 mb-2">
+                    Upload Image with Names
+                </label>
+                <div class="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-blue-400 transition-colors cursor-pointer" id="uploadArea">
+                    <input type="file" accept="image/*" id="imageFile" class="hidden">
+                    <svg class="w-12 h-12 text-gray-400 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                        <polyline points="17 8 12 3 7 8"></polyline>
+                        <line x1="12" y1="3" x2="12" y2="15"></line>
+                    </svg>
+                    <p class="text-gray-600" id="uploadText">Click to upload an image</p>
+                </div>
+            </div>
+
+            <button id="researchBtn" class="mt-4 w-full bg-blue-600 text-white py-3 rounded-lg font-medium hover:bg-blue-700 transition-colors flex items-center justify-center gap-2">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <circle cx="11" cy="11" r="8"></circle>
+                    <path d="m21 21-4.35-4.35"></path>
+                </svg>
+                Start Research
+            </button>
+        </div>
+
+        <!-- Error Display -->
+        <div id="errorBox" class="hidden bg-red-50 border border-red-200 rounded-lg p-4 mb-6 flex items-start gap-3">
+            <svg class="w-5 h-5 text-red-600 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <circle cx="12" cy="12" r="10"></circle>
+                <line x1="12" y1="8" x2="12" y2="12"></line>
+                <line x1="12" y1="16" x2="12.01" y2="16"></line>
+            </svg>
+            <p class="text-red-800" id="errorText"></p>
+        </div>
+
+        <!-- Results -->
+        <div id="resultsContainer" class="hidden">
+            <h2 class="text-2xl font-bold text-gray-900 mb-4">Research Results</h2>
+            <div id="results" class="space-y-4"></div>
+        </div>
+
+        <!-- API Key Section -->
+        <div class="bg-white rounded-lg shadow-sm p-4 mt-6">
+            <button id="apiToggle" class="w-full flex items-center justify-between text-sm font-medium text-gray-700 hover:text-gray-900">
+                <span>API Settings</span>
+                <span class="text-gray-400">▼</span>
+            </button>
+            
+            <div id="apiSection" class="hidden mt-4 pt-4 border-t border-gray-200">
+                <label class="block text-sm font-medium text-gray-700 mb-2">
+                    Anthropic API Key
+                </label>
+                <input type="password" id="apiKey" placeholder="sk-ant-..."
+                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                <p class="text-xs text-gray-500 mt-2">
+                    Get your API key at console.anthropic.com • Your key is saved securely in your browser
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let inputMethod = 'text';
+        let imageFile = null;
+        let apiKey = '';
+
+        // Load API key from storage
+        async function loadApiKey() {
+            try {
+                const result = await window.storage.get('anthropic_api_key');
+                if (result && result.value) {
+                    apiKey = result.value;
+                    document.getElementById('apiKey').value = apiKey;
+                }
+            } catch (err) {
+                // Key doesn't exist yet
+            }
+        }
+
+        // Save API key
+        async function saveApiKey(key) {
+            apiKey = key;
+            if (key.trim()) {
+                try {
+                    await window.storage.set('anthropic_api_key', key);
+                } catch (err) {
+                    console.error('Failed to save API key:', err);
+                }
+            }
+        }
+
+        // Toggle input method
+        document.getElementById('textBtn').addEventListener('click', () => {
+            inputMethod = 'text';
+            document.getElementById('textInput').classList.remove('hidden');
+            document.getElementById('imageInput').classList.add('hidden');
+            document.getElementById('textBtn').className = 'flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-colors bg-blue-600 text-white';
+            document.getElementById('imageBtn').className = 'flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-colors bg-gray-100 text-gray-700 hover:bg-gray-200';
+        });
+
+        document.getElementById('imageBtn').addEventListener('click', () => {
+            inputMethod = 'image';
+            document.getElementById('textInput').classList.add('hidden');
+            document.getElementById('imageInput').classList.remove('hidden');
+            document.getElementById('textBtn').className = 'flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-colors bg-gray-100 text-gray-700 hover:bg-gray-200';
+            document.getElementById('imageBtn').className = 'flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-colors bg-blue-600 text-white';
+        });
+
+        // Handle image upload
+        document.getElementById('uploadArea').addEventListener('click', () => {
+            document.getElementById('imageFile').click();
+        });
+
+        document.getElementById('imageFile').addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file && file.type.startsWith('image/')) {
+                imageFile = file;
+                document.getElementById('uploadText').textContent = file.name;
+                showError('');
+            } else {
+                showError('Please upload a valid image file');
+            }
+        });
+
+        // API key input
+        document.getElementById('apiKey').addEventListener('input', (e) => {
+            saveApiKey(e.target.value);
+        });
+
+        // Toggle API section
+        document.getElementById('apiToggle').addEventListener('click', () => {
+            const section = document.getElementById('apiSection');
+            const toggle = document.getElementById('apiToggle').querySelector('span:last-child');
+            if (section.classList.contains('hidden')) {
+                section.classList.remove('hidden');
+                toggle.textContent = '▲';
+            } else {
+                section.classList.add('hidden');
+                toggle.textContent = '▼';
+            }
+        });
+
+        // Show error
+        function showError(message) {
+            const errorBox = document.getElementById('errorBox');
+            const errorText = document.getElementById('errorText');
+            if (message) {
+                errorText.textContent = message;
+                errorBox.classList.remove('hidden');
+            } else {
+                errorBox.classList.add('hidden');
+            }
+        }
+
+        // Clean text
+        function cleanResearchText(text) {
+            let cleaned = text.replace(/<cite[^>]*>/g, '').replace(/<\/cite>/g, '');
+            cleaned = cleaned.replace(/<[^>]+>/g, '');
+            cleaned = cleaned.replace(/\s+/g, ' ').trim();
+            return cleaned;
+        }
+
+        // Extract names from image
+        async function extractNamesFromImage(base64Image) {
+            const response = await fetch("https://api.anthropic.com/v1/messages", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "x-api-key": apiKey,
+                    "anthropic-version": "2023-06-01"
+                },
+                body: JSON.stringify({
+                    model: "claude-sonnet-4-20250514",
+                    max_tokens: 1024,
+                    messages: [{
+                        role: "user",
+                        content: [
+                            {
+                                type: "image",
+                                source: {
+                                    type: "base64",
+                                    media_type: "image/jpeg",
+                                    data: base64Image
+                                }
+                            },
+                            {
+                                type: "text",
+                                text: "Extract all person names from this image. Return ONLY a simple list of names, one per line, with no additional formatting, bullets, or explanations."
+                            }
+                        ]
+                    }]
+                })
+            });
+
+            const data = await response.json();
+            if (data.content && data.content[0]) {
+                return data.content[0].text.trim();
+            }
+            throw new Error('Failed to extract names from image');
+        }
+
+        // Find profile image
+        async function findProfileImage(name, context) {
+            try {
+                const response = await fetch("https://api.anthropic.com/v1/messages", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "x-api-key": apiKey,
+                        "anthropic-version": "2023-06-01"
+                    },
+                    body: JSON.stringify({
+                        model: "claude-sonnet-4-20250514",
+                        max_tokens: 2048,
+                        messages: [{
+                            role: "user",
+                            content: `Find the LinkedIn profile for ${name}${context ? ` who works at ${context}` : ''}. 
+
+Steps:
+1. Search for their LinkedIn profile URL
+2. Visit the LinkedIn page using web_fetch
+3. Look for their profile photo image URL in the page content
+4. Return ONLY the image URL in this format: IMAGE_URL: [url]
+
+If you cannot find an image, return: IMAGE_URL: NONE
+
+Important: LinkedIn profile photos are usually at URLs containing "profile-displayphoto" or "media.licdn.com". Extract the actual image URL, not the LinkedIn page URL.`
+                        }],
+                        tools: [{
+                            type: "web_search_20250305",
+                            name: "web_search"
+                        }]
+                    })
+                });
+
+                const data = await response.json();
+                if (data.content) {
+                    const text = data.content
+                        .filter(block => block.type === 'text')
+                        .map(block => block.text)
+                        .join(' ');
+                    
+                    const linkedinImageMatch = text.match(/https?:\/\/[^\s]*(?:licdn\.com|linkedin\.com)[^\s]*(?:profile|photo|image)[^\s]*/i);
+                    if (linkedinImageMatch) {
+                        return linkedinImageMatch[0].replace(/[,\)]$/, '');
+                    }
+                    
+                    const urlMatch = text.match(/IMAGE_URL:\s*(https?:\/\/[^\s]+)/i);
+                    if (urlMatch && !text.includes('NONE')) {
+                        return urlMatch[1].replace(/[,\)]$/, '').trim();
+                    }
+                    
+                    const anyImageMatch = text.match(/https?:\/\/[^\s]*\.(jpg|jpeg|png|webp)[^\s]*/i);
+                    if (anyImageMatch) {
+                        return anyImageMatch[0].replace(/[,\)]$/, '');
+                    }
+                }
+                return null;
+            } catch (err) {
+                console.error('Image search error:', err);
+                return null;
+            }
+        }
+
+        // Research person
+        async function researchPerson(name) {
+            try {
+                const response = await fetch("https://api.anthropic.com/v1/messages", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "x-api-key": apiKey,
+                        "anthropic-version": "2023-06-01"
+                    },
+                    body: JSON.stringify({
+                        model: "claude-sonnet-4-20250514",
+                        max_tokens: 3000,
+                        messages: [{
+                            role: "user",
+                            content: `Research ${name} and provide a professional background summary.
+
+CRITICAL PRIORITIZATION RULE - READ THIS FIRST:
+If there are multiple people with the name "${name}", you MUST prioritize in this exact order:
+1. FIRST: Anyone working in technology, startups, AI, software, venture capital, legal tech
+2. SECOND: Anyone in business, finance, or consulting  
+3. LAST: Anyone in academia, medicine, or other fields
+
+Search specifically for "${name}" + "tech" OR "${name}" + "startup" OR "${name}" + "AI" OR "${name}" + "legal tech" OR "${name}" + "venture capital" FIRST.
+
+DO NOT profile someone in medicine, academia, or unrelated fields if there is someone with the same name in tech/startups/AI/legal tech/VC.
+
+FORMATTING INSTRUCTIONS:
+- Do NOT include your search process, reasoning, or thoughts
+- Do NOT include phrases like "Let me search" or "I found" or "Now let me"
+- Go directly to the final summary with NO preamble
+
+Write a clean, professional summary with these sections on separate lines:
+
+Role: [their current position and company]
+
+Background: [2-3 sentences about their career history and experience]
+
+Recent: [2-3 sentences about recent activities, news, or projects from the last 1-2 years]
+
+Notable: [1-2 sentences about key achievements]
+
+Remember: NO citation tags, NO XML markup, NO thinking process, NO markdown asterisks. Just clean text.`
+                        }],
+                        tools: [{
+                            type: "web_search_20250305",
+                            name: "web_search"
+                        }]
+                    })
+                });
+
+                const data = await response.json();
+                
+                if (data.error) {
+                    throw new Error(data.error.message);
+                }
+
+                let researchText = '';
+                if (data.content) {
+                    researchText = data.content
+                        .filter(block => block.type === 'text')
+                        .map(block => block.text)
+                        .join('\n');
+                }
+
+                researchText = cleanResearchText(researchText);
+                researchText = researchText.replace(/\*\*/g, '');
+                researchText = researchText.replace(/^(The search results?|Let me|I found|Now|Great!|Perfect!).*?(\n|\.)/gim, '');
+                researchText = researchText.replace(/^[-*—]+\s*$/gm, '');
+                researchText = researchText.replace(/\n{3,}/g, '\n\n').trim();
+
+                const companyMatch = researchText.match(/(?:at|@)\s+([A-Z][A-Za-z0-9\s&.]+?)(?:\.|,|\n|$)/);
+                const companyContext = companyMatch ? companyMatch[1].trim() : null;
+
+                const imageUrl = await findProfileImage(name, companyContext);
+
+                return {
+                    name,
+                    summary: researchText,
+                    imageUrl
+                };
+            } catch (err) {
+                return {
+                    name,
+                    error: `Research failed: ${err.message}`,
+                    imageUrl: null
+                };
+            }
+        }
+
+        // Display result
+        function displayResult(person) {
+            const resultsDiv = document.getElementById('results');
+            const resultCard = document.createElement('div');
+            resultCard.className = 'bg-white rounded-lg shadow-sm p-6';
+
+            let html = `
+                <div class="flex items-start gap-4 mb-4">
+            `;
+
+            if (person.imageUrl) {
+                html += `
+                    <img src="${person.imageUrl}" alt="${person.name}" 
+                        class="w-16 h-16 rounded-full object-cover border-2 border-gray-200"
+                        onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                `;
+            }
+
+            html += `
+                    <div class="w-16 h-16 rounded-full bg-blue-100 flex items-center justify-center ${person.imageUrl ? 'hidden' : 'flex'}">
+                        <svg class="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                            <circle cx="12" cy="7" r="4"></circle>
+                        </svg>
+                    </div>
+                    <div class="flex-1">
+                        <h3 class="text-xl font-bold text-gray-900">${person.name}</h3>
+                    </div>
+                </div>
+            `;
+
+            if (person.error) {
+                html += `<p class="text-red-600">${person.error}</p>`;
+            } else {
+                const sections = person.summary.split(/(?=\b(?:Role|Background|Recent|Notable):)/g);
+                html += '<div class="text-gray-700 leading-relaxed">';
+                
+                sections.forEach(section => {
+                    if (!section.trim()) return;
+                    
+                    const match = section.match(/^(Role|Background|Recent|Notable):\s*(.+)/s);
+                    if (match) {
+                        const [, label, content] = match;
+                        html += `
+                            <div class="mb-4">
+                                <div class="font-bold text-gray-900 mb-1">${label}:</div>
+                                <div class="text-gray-700">${content.trim()}</div>
+                            </div>
+                        `;
+                    } else {
+                        html += `<p class="mb-4">${section.trim()}</p>`;
+                    }
+                });
+                
+                html += '</div>';
+            }
+
+            resultCard.innerHTML = html;
+            resultsDiv.appendChild(resultCard);
+        }
+
+        // Main research function
+        async function handleResearch() {
+            if (!apiKey) {
+                showError('Please enter your Anthropic API key in the API Settings below');
+                return;
+            }
+
+            const btn = document.getElementById('researchBtn');
+            btn.disabled = true;
+            btn.innerHTML = `
+                <svg class="w-5 h-5 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <circle cx="12" cy="12" r="10" stroke-width="4" class="opacity-25"></circle>
+                    <path d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" class="opacity-75"></path>
+                </svg>
+                Researching...
+            `;
+
+            showError('');
+            document.getElementById('results').innerHTML = '';
+            document.getElementById('resultsContainer').classList.remove('hidden');
+
+            try {
+                let namesList = '';
+
+                if (inputMethod === 'image' && imageFile) {
+                    const base64 = await new Promise((resolve, reject) => {
+                        const reader = new FileReader();
+                        reader.onload = () => resolve(reader.result.split(',')[1]);
+                        reader.onerror = reject;
+                        reader.readAsDataURL(imageFile);
+                    });
+
+                    namesList = await extractNamesFromImage(base64);
+                } else {
+                    namesList = document.getElementById('attendeeList').value;
+                }
+
+                if (!namesList.trim()) {
+                    showError('No names found. Please provide attendee information.');
+                    return;
+                }
+
+                const names = namesList
+                    .split('\n')
+                    .map(line => line.trim())
+                    .filter(line => line && line.length > 0)
+                    .map(line => line.replace(/^[-•*]\s*/, '').replace(/^\d+\.\s*/, ''));
+
+                for (const name of names) {
+                    const result = await researchPerson(name);
+                    displayResult(result);
+                }
+
+            } catch (err) {
+                showError(err.message);
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = `
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <circle cx="11" cy="11" r="8"></circle>
+                        <path d="m21 21-4.35-4.35"></path>
+                    </svg>
+                    Start Research
+                `;
+            }
+        }
+
+        // Event listeners
+        document.getElementById('researchBtn').addEventListener('click', handleResearch);
+
+        // Initialize
+        loadApiKey();
+    </script>
+</body>
+</html>
