@@ -1,5 +1,19 @@
 // api/briefing.js
-// Backend API for Daily Briefing data
+// Backend API for Daily Briefing data with caching
+
+// In-memory cache (resets on cold start, but good enough for our use case)
+let cache = {
+  weather: { data: null, timestamp: 0 },
+  stocks: { data: null, timestamp: 0 },
+  globalNews: { data: null, timestamp: 0 },
+  legalNews: { data: null, timestamp: 0 }
+};
+
+const CACHE_DURATION = 60 * 60 * 1000; // 1 hour in milliseconds
+
+function isCacheValid(cacheEntry) {
+  return cacheEntry.data && (Date.now() - cacheEntry.timestamp) < CACHE_DURATION;
+}
 
 export default async function handler(req, res) {
   // Enable CORS
@@ -22,6 +36,15 @@ export default async function handler(req, res) {
 
     switch (action) {
       case 'getWeather': {
+        // Check cache first
+        if (isCacheValid(cache.weather)) {
+          return res.status(200).json({
+            success: true,
+            weather: cache.weather.data,
+            cached: true
+          });
+        }
+
         const weatherKey = process.env.WEATHER_API_KEY;
         const weatherUrl = `https://api.openweathermap.org/data/2.5/weather?q=Los Angeles,US&appid=${weatherKey}&units=imperial`;
         
@@ -32,26 +55,47 @@ export default async function handler(req, res) {
           throw new Error('Weather API failed');
         }
 
+        const weatherResult = {
+          temp: Math.round(weatherData.main.temp),
+          feels_like: Math.round(weatherData.main.feels_like),
+          description: weatherData.weather[0].description,
+          icon: weatherData.weather[0].icon,
+          humidity: weatherData.main.humidity,
+          wind_speed: Math.round(weatherData.wind.speed)
+        };
+
+        // Update cache
+        cache.weather = {
+          data: weatherResult,
+          timestamp: Date.now()
+        };
+
         return res.status(200).json({
           success: true,
-          weather: {
-            temp: Math.round(weatherData.main.temp),
-            feels_like: Math.round(weatherData.main.feels_like),
-            description: weatherData.weather[0].description,
-            icon: weatherData.weather[0].icon,
-            humidity: weatherData.main.humidity,
-            wind_speed: Math.round(weatherData.wind.speed)
-          }
+          weather: weatherResult,
+          cached: false
         });
       }
 
       case 'getStocks': {
+        // Check cache first
+        if (isCacheValid(cache.stocks)) {
+          return res.status(200).json({
+            success: true,
+            stocks: cache.stocks.data,
+            cached: true
+          });
+        }
+
         const stockKey = process.env.STOCK_API_KEY;
         
         // Get S&P 500 (using SPY ETF as proxy)
         const spUrl = `https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=SPY&apikey=${stockKey}`;
         const spResponse = await fetch(spUrl);
         const spData = await spResponse.json();
+
+        // Add delay to avoid rate limit
+        await new Promise(resolve => setTimeout(resolve, 12000)); // 12 second delay
 
         // Get NASDAQ (using QQQ ETF as proxy)
         const nasdaqUrl = `https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=QQQ&apikey=${stockKey}`;
@@ -65,20 +109,29 @@ export default async function handler(req, res) {
         const spQuote = spData['Global Quote'];
         const nasdaqQuote = nasdaqData['Global Quote'];
 
+        const stocksResult = {
+          sp500: {
+            price: parseFloat(spQuote['05. price']).toFixed(2),
+            change: parseFloat(spQuote['09. change']).toFixed(2),
+            changePercent: spQuote['10. change percent'].replace('%', '')
+          },
+          nasdaq: {
+            price: parseFloat(nasdaqQuote['05. price']).toFixed(2),
+            change: parseFloat(nasdaqQuote['09. change']).toFixed(2),
+            changePercent: nasdaqQuote['10. change percent'].replace('%', '')
+          }
+        };
+
+        // Update cache
+        cache.stocks = {
+          data: stocksResult,
+          timestamp: Date.now()
+        };
+
         return res.status(200).json({
           success: true,
-          stocks: {
-            sp500: {
-              price: parseFloat(spQuote['05. price']).toFixed(2),
-              change: parseFloat(spQuote['09. change']).toFixed(2),
-              changePercent: spQuote['10. change percent'].replace('%', '')
-            },
-            nasdaq: {
-              price: parseFloat(nasdaqQuote['05. price']).toFixed(2),
-              change: parseFloat(nasdaqQuote['09. change']).toFixed(2),
-              changePercent: nasdaqQuote['10. change percent'].replace('%', '')
-            }
-          }
+          stocks: stocksResult,
+          cached: false
         });
       }
 
@@ -89,6 +142,16 @@ export default async function handler(req, res) {
 
         const { category } = req.body;
         
+        // Check cache first
+        const cacheKey = category === 'global' ? 'globalNews' : 'legalNews';
+        if (isCacheValid(cache[cacheKey])) {
+          return res.status(200).json({
+            success: true,
+            stories: cache[cacheKey].data,
+            cached: true
+          });
+        }
+
         let searchPrompt;
         if (category === 'global') {
           searchPrompt = 'Find 5 top global news stories from TODAY. Return ONLY valid JSON with title, summary, url, source, imageUrl for each.';
@@ -198,9 +261,16 @@ Return ONLY the JSON array, nothing else.`
 
         const stories = JSON.parse(jsonMatch[0]);
 
+        // Update cache
+        cache[cacheKey] = {
+          data: stories,
+          timestamp: Date.now()
+        };
+
         return res.status(200).json({
           success: true,
-          stories: stories
+          stories: stories,
+          cached: false
         });
       }
 
