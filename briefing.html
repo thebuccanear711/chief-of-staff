@@ -74,6 +74,7 @@
                 </svg>
                 Refresh Briefing
             </button>
+            <p class="text-xs text-gray-500 mt-2" id="cacheStatus">Data refreshes automatically every hour</p>
         </div>
 
         <!-- Loading State -->
@@ -180,6 +181,10 @@
                     document.getElementById('temperature').textContent = `${data.weather.temp}°F`;
                     document.getElementById('weatherDesc').textContent = data.weather.description;
                     document.getElementById('weatherIcon').textContent = weatherIcons[data.weather.icon] || '🌤️';
+                    
+                    if (data.cached) {
+                        console.log('Weather data loaded from cache');
+                    }
                 }
             } catch (err) {
                 console.error('Weather error:', err);
