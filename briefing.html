@@ -294,8 +294,12 @@
                 loadStocks()
             ]);
 
-            // Load news sequentially (to avoid rate limits)
+            // Load news sequentially with delay to avoid rate limits
             await loadNews('global', 'globalNews');
+            
+            // Wait 3 seconds between news requests to avoid rate limiting
+            await new Promise(resolve => setTimeout(resolve, 3000));
+            
             await loadNews('legal', 'legalNews');
 
             document.getElementById('newsContainer').classList.remove('hidden');
