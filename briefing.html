@@ -228,11 +228,13 @@
             const card = document.createElement('div');
             card.className = 'bg-white rounded-lg shadow-sm overflow-hidden hover:shadow-md transition-shadow';
 
-            const imageUrl = story.imageUrl || 'https://via.placeholder.com/400x200?text=News';
+            // Use a data URI placeholder if no image
+            const defaultImage = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 200"%3E%3Crect width="400" height="200" fill="%23e5e7eb"/%3E%3Ctext x="50%25" y="50%25" dominant-baseline="middle" text-anchor="middle" fill="%236b7280" font-family="system-ui" font-size="18" font-weight="600"%3ENews Image%3C/text%3E%3C/svg%3E';
+            const imageUrl = (story.imageUrl && !story.imageUrl.includes('placeholder')) ? story.imageUrl : defaultImage;
 
             card.innerHTML = `
                 <img src="${imageUrl}" alt="${story.title}" class="w-full h-48 object-cover" 
-                     onerror="this.src='https://via.placeholder.com/400x200?text=News'">
+                     onerror="this.src='${defaultImage}'">
                 <div class="p-4">
                     <a href="${story.url}" target="_blank" class="block group">
                         <h3 class="text-lg font-bold text-gray-900 mb-2 group-hover:text-blue-600 transition-colors">
@@ -242,9 +244,7 @@
                     <p class="text-sm text-gray-700 mb-3">${story.summary}</p>
                     <div class="flex items-center justify-between text-xs text-gray-500">
                         <span>${story.source}</span>
-                        <a href="${story.url}" target="_blank" class="text-blue-600 hover:text-blue-700 font-medium">
-                            Read more →
-                        </a>
+                        ${story.url !== '#' ? `<a href="${story.url}" target="_blank" class="text-blue-600 hover:text-blue-700 font-medium">Read more →</a>` : ''}
                     </div>
                 </div>
             `;
@@ -294,12 +294,8 @@
                 loadStocks()
             ]);
 
-            // Load news sequentially with delay to avoid rate limits
+            // Load news sequentially (to avoid rate limits)
             await loadNews('global', 'globalNews');
-            
-            // Wait 3 seconds between news requests to avoid rate limiting
-            await new Promise(resolve => setTimeout(resolve, 3000));
-            
             await loadNews('legal', 'legalNews');
 
             document.getElementById('newsContainer').classList.remove('hidden');
